@@ -8,5 +8,8 @@
             Name = name;
             Value = value;
         }
+        override public string ToString() {
+            return $"Name: {Name} \tValue: {Value}";
+        }
     }
 }
