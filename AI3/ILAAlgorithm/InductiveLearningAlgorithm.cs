@@ -5,144 +5,149 @@ namespace AI3.ILAAlgorithm {
     public static class InductiveLearningAlgorithm {
 
         public static List<Rule> Learn(IEnumerable<Entity> data) {
+            // Step 1: Divide the array (m examples) into n subarrays (n is the number of classes). 
+            // One subarray for each possible value of the class attribute (for each class), set R as an empty set.
             var ruleset = new List<Rule>();
-            List<ILAAttribute> mostFrequentCombos = new();
-
-            var subarrays = new List<Entity>[data.Select(x => x.decitionAttribute).Distinct().Count()];
-            for (int i = 0; i < subarrays.Length; i++) {
-                subarrays[i] = new List<Entity>();
-            }
+            var subarrays = new Dictionary<int, List<Entity>>();
 
             foreach (var row in data) {
-                subarrays[row.decitionAttribute].Add(row);
+                if (!subarrays.ContainsKey(row.decisionAttribute)) {
+                    subarrays[row.decisionAttribute] = new List<Entity>();
+                }
+                subarrays[row.decisionAttribute].Add(row);
             }
 
-            foreach (var subarray in subarrays.OrderByDescending(x => x.First().decitionAttribute)) {
-                var subarraysWithoutCurrent = subarrays
-                    .Where(x => x != subarray)
-                    .SelectMany(x => x)
-                    .SelectMany(x => x.Attributes)
-                    .ToList();
+            // Steps 2-8 are repeated for each subarray
+            foreach (var subarray in subarrays.Values) {
+                // Step 2: Initialize the number of attribute combinations j as j=1 (set j=1)
+                int numAttributeCombinations = 1;
 
-                int j = 1;
-                List<ILAAttribute> KOMBINACJA_MAKSYMALNA = new ();
+                // Step 3: For the considered subarray, divide the list of attributes into distinct combinations, 
+                // each combination with j distinct attributes
+                var attributeCombinations = GetAttributeCombinations(subarray, numAttributeCombinations);
 
-                while (subarray.Any(x => !x.IsClassified)) {
-                    for (int i = 0; i < subarray.First().Attributes.Count(); i++) {
-                        if (i + j > subarray.First().Attributes.Count()) {
-                            continue;
-                        }
+                while (attributeCombinations.Any()) {
+                    // Step 4: For each attribute combination, count the number of occurrences of the class attribute 
+                    // value that appear under this same attribute combination in the unmarked rows of the considered subarray, 
+                    // but which at the same time do not appear under this same attribute combination in other subarrays. 
+                    // Call the first combination with the maximum number of occurrences as COMBINATION_MAXIMUM
+                    var maxCombination = GetMaxCombination(subarray, attributeCombinations, subarrays);
 
-                        var currentCombination = subarray
-                            .SelectMany(x => x.Attributes.Select(a => a.Name).Skip(i).Take(j))
-                            .Distinct()
-                            .ToList();
-
-                        var correctValues = subarray
-                           .Select(x => x.Attributes)
-                           .SelectMany(x => x.Where(xx => currentCombination.Contains(xx.Name)))
-                           .Where(x => !subarraysWithoutCurrent.Any(a => a.Value.Equals(x.Value)))
-                           .GroupBy(x => x.Value)
-                           .OrderByDescending(x => x.Count())
-                           .ToList();
-
-                        if (correctValues.Count == 0) {
-                            throw new Exception("NIE MA KOMBINACJI.");
-                        }
-
-                        var maxValues = correctValues
-                            .Where(g => g.Count() == correctValues.Max(a => a.Count()))
-                            .SelectMany(x => x)
-                            .DistinctBy(x => x.Name)
-                            .ToList();
-                        
-                        Entity entity = null;
-
-                        if (maxValues.Count > KOMBINACJA_MAKSYMALNA.Count) {
-                            foreach (var combination in maxValues) {
-                                entity = subarray.First(e => e.Attributes.Contains(combination));
-                            }
-                            KOMBINACJA_MAKSYMALNA = maxValues;
-                        }
-
-                        int a = 0;
-
+                    // Step 5: If COMBINATION_MAXIMUM=0, increase j by 1 and go to step 3 (j=j+1)
+                    if (maxCombination == null) {
+                        numAttributeCombinations++;
+                        attributeCombinations = GetAttributeCombinations(subarray, numAttributeCombinations);
+                        continue;
                     }
-                    //        var combinations = subarray
-                    //.SelectMany(x => x.Attributes)
-                    //.Select((x, i) => new { x, i })
-                    //.GroupBy(x => x.i / j, x => x.x)
-                    //.Select(x => x.ToList());
 
+                    // Step 6: Mark as classified all rows in the considered subarray where values from COMBINATION_MAXIMUM appear
+                    MarkClassified(subarray, maxCombination);
 
-                    //var mostFrequent = subarray
-                    //    .Where(g => subarraysWithoutCurrent.All(s => !s.Any(x => g.Attributes.All(c => x.Attributes.Contains(c)))))
-                    //    .GroupBy(row => row.Attributes.Take(j))
-                    //    .OrderByDescending(g => g.Count())
-                    //    .First();
+                    // Step 7: Add a rule to R, the left side of this rule contains the names of the attributes from COMBINATION_MAXIMUM 
+                    // with their values, separated by the logical AND operator, and the right side contains the value of the decision attribute 
+                    // associated with the subarray (class)
+                    ruleset.Add(new Rule {
+                        Attributes = maxCombination,
+                        DecisionAttribute = subarray.First().decisionAttribute
+                    });
 
-                    // If the most frequent combination of attributes is not found,
-                    // increase the number of attributes in the combination and try again
-                    // while (!mostFrequent.Key.Any())
-                    //{
-                    j++;
-                    //    mostFrequent = subarray
-                    //        .Where(g => subarraysWithoutCurrent.All(s => !s.Any(x => g.Attributes.All(c => x.Attributes.Contains(c)))))
-                    //        .GroupBy(row => row.Attributes.Take(j))
-                    //        .OrderByDescending(g => g.Count())
-                    //        .First();
-                    //}
+                    // Step 8: If all rows in the considered subarray are marked as classified, then go to processing the next subarray (go to step 2)
+                    if (subarray.All(x => x.IsClassified)) {
+                        break;
+                    }
 
-
-                    // Create a new rule for the most frequent combination of attributes
-                    //var rule = new Rule {
-                    //  Attributes = mostFrequent.Key.ToList(),
-                    //    DecisionAttribute = subarray.First().Attributes.Last()
-                    //};
-
-                    // Add the rule to the ruleset
-                    // ruleset.Add(rule);
-                    // }
+                    // If there are still unmarked rows, go to step 4
+                    // If there are no more subarrays, return the current set of rules R
                 }
-
             }
             return ruleset;
         }
 
-        static List<ILAAttribute> FindMostFrequentCombo(List<List<Entity>> subarrays) {
-            List<ILAAttribute> mostFrequentCombos = new();
-            int maxFrequency = 0;
-
-            foreach (var subarray in subarrays) {
-                // Check all combinations of attributes from 1 to the number of attributes in each entity
-                for (int i = 1; i <= subarray[0].Attributes.Count(); i++) {
-                    var currentCombinations = subarray
-                       .SelectMany(x => x.Attributes.Combinations(i))
-                       .Distinct()
-                       .ToList();
-
-                    // Check the frequency of each combination in the current subarray
-                    foreach (var currentCombination in currentCombinations) {
-                        int frequency = subarray
-                           .Count(x => x.Attributes.All(a => currentCombination.Contains(a)));
-
-                        // Check if the combination does not exist in the other subarrays
-                        bool existsInOtherSubarrays = subarrays
-                           .Where(s => s != subarray)
-                           .Any(s => s.Any(x => currentCombination.All(c => x.Attributes.Any(a => a.Value.Equals(c.Value)))));
-
-                        if (frequency > maxFrequency && !existsInOtherSubarrays) {
-                            maxFrequency = frequency;
-                            mostFrequentCombos = new List<ILAAttribute>();
-                            mostFrequentCombos.AddRange(currentCombination);
-                        } else if (frequency == maxFrequency && !existsInOtherSubarrays) {
-                            mostFrequentCombos.AddRange(currentCombination);
+        public static List<ILAAttribute> GetMaxCombination(List<Entity> subarray, List<List<ILAAttribute>> attributeCombinations, Dictionary<int, List<Entity>> subarrays) {
+            // Find the combination with the maximum number of occurrences in the subarray and the minimum number of occurrences in the other subarrays.
+            var maxCombination = new List<ILAAttribute>();
+            var maxCount = 0;
+            var minOtherCount = int.MaxValue;
+            foreach (var combination in attributeCombinations) {
+                var count = 0;
+                var otherCount = 0;
+                foreach (var row in subarray) {
+                    if (row.Attributes.All(a => combination.Contains(a))) {
+                        count++;
+                    }
+                }
+                foreach (var otherSubarray in subarrays.Values) {
+                    if (otherSubarray == subarray) continue;
+                    foreach (var otherRow in otherSubarray) {
+                        if (otherRow.Attributes.All(a => combination.Contains(a))) {
+                            otherCount++;
                         }
                     }
                 }
+                if (count > maxCount || (count == maxCount && otherCount < minOtherCount)) {
+                    maxCombination = combination;
+                    maxCount = count;
+                    minOtherCount = otherCount;
+                }
             }
+            return maxCombination;
+        }
 
-            return mostFrequentCombos;
+        public static List<List<ILAAttribute>> GetAttributeCombinations(List<Entity> subarray, int numAttributeCombinations) {
+            var attributeCombinations = new List<List<ILAAttribute>>();
+            foreach (var entity in subarray) {
+                // Generate all combinations of `numAttributeCombinations` attributes for each entity
+                var entityAttributeCombinations = GenerateAttributeCombinations(entity.Attributes.ToList(), numAttributeCombinations);
+                attributeCombinations.AddRange(entityAttributeCombinations);
+            }
+            return attributeCombinations;
+        }
+
+        private static List<List<ILAAttribute>> GenerateAttributeCombinations(List<ILAAttribute> attributes, int numAttributes) {
+            var combinations = new List<List<ILAAttribute>>();
+            // Generate all combinations of `numAttributes` attributes using recursion
+            GenerateAttributeCombinationsRecursive(attributes, numAttributes, new List<ILAAttribute>(), combinations);
+            return combinations;
+        }
+
+        private static void GenerateAttributeCombinationsRecursive(List<ILAAttribute> attributes, int numAttributes, List<ILAAttribute> currentCombination, List<List<ILAAttribute>> combinations) {
+            if (currentCombination.Count == numAttributes) {
+                combinations.Add(new List<ILAAttribute>(currentCombination));
+                return;
+            }
+            for (int i = 0; i < attributes.Count; i++) {
+                currentCombination.Add(attributes[i]);
+                GenerateAttributeCombinationsRecursive(attributes, numAttributes, currentCombination, combinations);
+                currentCombination.RemoveAt(currentCombination.Count - 1);
+            }
+        }
+
+        public static List<ILAAttribute> GetMaxCombination(List<Entity> subarray, List<List<ILAAttribute>> combinations) {
+            // Find the combination with the maximum number of occurrences in the subarray.
+            var maxCombination = new List<ILAAttribute>();
+            var maxCount = 0;
+            foreach (var combination in combinations) {
+                var count = 0;
+                foreach (var row in subarray) {
+                    if (row.Attributes.All(a => combination.Contains(a))) {
+                        count++;
+                    }
+                }
+                if (count > maxCount) {
+                    maxCombination = combination;
+                    maxCount = count;
+                }
+            }
+            return maxCombination;
+        }
+
+        public static void MarkClassified(List<Entity> subarray, List<ILAAttribute> combination) {
+            // Mark all rows in the subarray as classified if they contain values from the combination.
+            foreach (var row in subarray) {
+                if (row.Attributes.All(a => combination.Contains(a))) {
+                    row.IsClassified = true;
+                }
+            }
         }
     }
 }
