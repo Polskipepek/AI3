@@ -13,7 +13,7 @@
         }
 
         public override bool Equals(object? obj) {
-            if (obj == null) return false;
+            if (obj == null) return Value == null;
             return Name.Equals((obj as ILAAttribute).Name) && Value.Equals((obj as ILAAttribute).Value);
         }
     }
