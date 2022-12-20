@@ -1,14 +1,22 @@
 ﻿using AI3.Entities;
 using AI3.ILAAlgorithm;
+using System.Drawing;
 
 Console.WriteLine("Cwiczenie 3!");
 
 var data = GetData(true);
 
+var ila = new InductiveLearningAlgorithm();
+var xd = ila.Learn(data);
 
-var xd = InductiveLearningAlgorithm.Learn(data);
-Console.WriteLine(xd);
+//Console.WriteLine(xd);
+//string[] inputSet = { "Size", "Color", "Shape" };
+//var aa = CombinationGenerator.GetCombinations(inputSet).OrderBy(x => x.Count());
+//foreach (var combination in aa) {
+//    Console.WriteLine(string.Join(", ", combination));
+//}
 
+Console.ReadLine();
 
 
 IEnumerable<Entity> GetData(bool @default) {

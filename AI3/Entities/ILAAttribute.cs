@@ -11,5 +11,10 @@
         override public string ToString() {
             return $"Name: {Name} \tValue: {Value}";
         }
+
+        public override bool Equals(object? obj) {
+            if (obj == null) return false;
+            return Name.Equals((obj as ILAAttribute).Name) && Value.Equals((obj as ILAAttribute).Value);
+        }
     }
 }
