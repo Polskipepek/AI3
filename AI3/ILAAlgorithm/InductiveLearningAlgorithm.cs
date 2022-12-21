@@ -43,24 +43,36 @@ namespace AI3.ILAAlgorithm {
                         if (!rowsWithAttributesThatArentInOtherSubarrays.Any()) {
                             continue;
                         }
-
-                        var attributeValues = combination.ToDictionary(x => x, x => new List<object>());
+                        var attributeValues = new Dictionary<IEnumerable<string>, List<object>>() { { combination, new List<object>() } };
+                        //var attributeValues = combination.ToDictionary(x => x, x => new List<object>());
                         foreach (var row in rowsWithAttributesThatArentInOtherSubarrays) {
-                            foreach (var attribute in combination) {
-                                attributeValues[attribute].Add(row.Attributes.First(a => a.Name.Equals(attribute)).Value);
-                            }
+                            attributeValues[combination].Add(row.Attributes.First(a => combination.Any(c => c.Equals(a.Name))).Value);
                         }
 
                         foreach (var attributeValue in attributeValues) {
-                            var localValue = attributeValue.Value.GroupBy(y => y).OrderByDescending(g => g.Count()).First().Key;
-                            var count = attributeValue.Value.Count(y => y.Equals(localValue));
-                            if (count > maxCount) {
-                                maxCombination = new();
-                                maxCombination.AddRange(from name in combination
-                                                        select new ILAAttribute() { Name = name, Value = localValue });
-                                maxCount = count;
+                            var groups = attributeValue.Value.GroupBy(y => y).OrderByDescending(g => g.Count()).ToList();
+                            for (int i = 0; i < groups.Count; i++) {
+                                var count = groups[i].Count();
+                                if (count > maxCount) {
+                                    maxCombination = new();
+                                    maxCombination.AddRange(from name in combination
+                                                            select new ILAAttribute() { Name = name, Value = groups[i].Key });
+                                    maxCount = count;
+                                }
                             }
                         }
+
+                        //foreach (var attributeValue in attributeValues) {
+                        //    var key = attributeValue.Value.GroupBy(y => y).OrderByDescending(g => g.Count()).First().Key;
+                        //    var groups = attributeValue.Value.GroupBy(y => y).OrderByDescending(g => g.Count()).ToList();
+                        //    var count = attributeValue.Value.Count(y => y.Equals(key));
+                        //    if (count > maxCount) {
+                        //        maxCombination = new();
+                        //        maxCombination.AddRange(from name in combination
+                        //                                select new ILAAttribute() { Name = name, Value = groups[i].Key });
+                        //        maxCount = count;
+                        //    }
+                        //}
                     }
 
                     if (!maxCombination.Any()) {
