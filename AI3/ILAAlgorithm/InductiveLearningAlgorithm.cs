@@ -31,12 +31,14 @@ namespace AI3.ILAAlgorithm {
                     }
 
                     foreach (var combination in currentCombinations) {
+                        var otherEntities = otherSubarrays.SelectMany(x => x.Value);
+
                         var rowsThatArentClassified = subarray.Where(x => !x.IsClassified);
+
                         var rowsWithAttributesThatArentInOtherSubarrays = rowsThatArentClassified
-                            .Where(entity => !otherSubarrays.Any(a => a.Value
-                                    .Any(entity2 => entity2.Attributes.Any(att => combination.Any(c => c.Equals(att.Name))
-                                    && entity.Attributes.Any(a => a.Name.Equals(att.Name) && a.Value.Equals(att.Value))))))
-                            .Where(entity => combination.All(c => entity.Attributes.Any(a => a.Name.Equals(c))));
+                            .Where(entity =>
+                                !otherEntities.Any(e => combination.All(c => e.Attributes.Any(a => a.Name.Equals(c)
+                                && a.Value.Equals(entity.Attributes.First(at => at.Name.Equals(c)).Value)))));
 
                         if (!rowsWithAttributesThatArentInOtherSubarrays.Any()) {
                             continue;
