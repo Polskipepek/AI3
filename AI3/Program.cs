@@ -7,8 +7,12 @@ Console.WriteLine("Cwiczenie 3!");
 Console.WriteLine();
 while (true) {
     Console.WriteLine("1. Example Data from presentation.");
-    Console.WriteLine("2. Test Data.");
-    Console.WriteLine("3. Training Data.");
+    Console.WriteLine("2. Test Banking Data.");
+    Console.WriteLine("3. Training Banking Data.");
+    Console.WriteLine("4. Test Fruits Data.TODO");
+    Console.WriteLine("5. Training Fruits Data.TODO");
+    Console.WriteLine("6. Custom Data");
+
     var input = Console.ReadKey();
     var data = GetData(input.Key);
     Console.Clear();
@@ -20,11 +24,12 @@ while (true) {
     var rules = ila.Learn(data);
     stopwatch.Stop();
 
+    Console.WriteLine($"Entities: {data.Count()}");
     Console.WriteLine($"Stopwatch: {stopwatch.ElapsedMilliseconds}ms");
     Console.WriteLine("Rules:");
 
     for (int i = 0; i < rules.Count; i++) {
-        Console.Write($"Rule {i + 1}: ");
+        Console.Write($"Rule {i + 1:000}: ");
         foreach (var att in rules[i].Attributes) {
             Console.Write($"({att.Name} = {att.Value})");
         }
@@ -37,12 +42,24 @@ while (true) {
 IEnumerable<Entity> GetData(ConsoleKey key) {
     if (key == ConsoleKey.D2) {
         var data = DataReader.ReadData($"{Environment.CurrentDirectory}/Data/test - short.csv", ";");
-        var mapped = TableToEntitiesMapper.Map(data);
-        return mapped;
+        return TableToEntitiesMapper.Map(data);
     } else if (key == ConsoleKey.D3) {
         var data = DataReader.ReadData($"{Environment.CurrentDirectory}/Data/train.csv");
-        var mapped = TableToEntitiesMapper.Map(data);
-        return mapped;
+        return TableToEntitiesMapper.Map(data);
+    //} else if (key == ConsoleKey.D4) {
+
+    //} else if (key == ConsoleKey.D5) {
+
+    } else if (key == ConsoleKey.D6) {
+        Console.Clear();
+        Console.WriteLine("Decision attribute column name needs to be named \'decision\'");
+        Console.WriteLine("Enter full path to the file. c:/users/alfa/desktop/dummydata.csv");
+        var path = Console.ReadLine();
+        Console.WriteLine("Enter delimeter type: (\',\', \';\'");
+        var delimeter = Console.ReadKey();
+        var data = DataReader.ReadData(path, delimeter.KeyChar.ToString());
+        return TableToEntitiesMapper.Map(data);
+
     } else {
         var examples = new List<Entity> {
             new Entity { Attributes = new List<ILAAttribute>() { new ILAAttribute("Rozmiar", "sredni"), new ILAAttribute("Kolor", "niebieski"), new ILAAttribute("Ksztalt", "kostka") }, DecisionAttribute = "TAK" },

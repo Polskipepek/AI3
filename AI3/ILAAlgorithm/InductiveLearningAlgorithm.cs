@@ -3,45 +3,37 @@
 namespace AI3.ILAAlgorithm {
     internal class InductiveLearningAlgorithm {
         public List<Rule> Learn(IEnumerable<Entity> data) {
-            // Step 1: Divide the array (m examples) into n subarrays (n is the number of classes). One subarray for each possible value of the class attribute (for each class), set R as an empty set.
             var ruleset = new List<Rule>();
             var subarrays = new Dictionary<string, List<Entity>>();
 
             DivideArrayIntoSubarrays(data, subarrays);
 
-            // Steps 2-8 are repeated for each subarray
+
             foreach (var subarray in subarrays.Values) {
-                int maxCount = 0;
                 List<ILAAttribute> maxCombination = new();
-                // Step 2: Initialize the number of attribute combinations j as j=1 (set j=1)
+                int maxCount = 0;
                 int numAttributeCombinations = 1;
 
                 var otherSubarrays = subarrays.Where(x => !x.Value.Equals(subarray));
-                var otherSubarraysAttributes = otherSubarrays.SelectMany(s => s.Value.SelectMany(x => x.Attributes)).DistinctBy(x => x.Value);
+                var otherSubarraysAttributes = new HashSet<ILAAttribute>(otherSubarrays.SelectMany(s => s.Value.SelectMany(x => x.Attributes)).DistinctBy(x => x.Value));
+                //var otherSubarraysAttributes = otherSubarrays.SelectMany(s => s.Value.SelectMany(x => x.Attributes)).DistinctBy(x => x.Value);
 
-                // Step 3: For the considered subarray, divide the list of attributes into distinct combinations, each combination with j distinct attributes
-                // Step 4: For each attribute combination, count the number of occurrences of the class attribute  value that appear under this same attribute combination in the unmarked rows of the considered subarray, 
-                // but which at the same time do not appear under this same attribute combination in other subarrays. Call the first combination with the maximum number of occurrences as maxCombination
                 while (!subarray.All(x => x.IsClassified)) {
                     var currentCombinations = CombinationGenerator.GetCombinations(subarray.First().Attributes.Select(x => x.Name)).Where(x => x.Count() == numAttributeCombinations);
 
-                    if (!currentCombinations.Any()) {
-                        break;
-                    }
+                    if (!currentCombinations.Any()) break;
 
                     foreach (var combination in currentCombinations) {
                         var otherEntities = otherSubarrays.SelectMany(x => x.Value);
-
                         var entitiesThatArentClassified = subarray.Where(x => !x.IsClassified);
 
                         var entitiesWithAttributesThatArentInOtherSubarrays = entitiesThatArentClassified
                             .Where(entity =>
                                 !otherEntities.Any(e => combination.All(c => e.Attributes.Any(a => a.Name.Equals(c)
-                                && a.Value.Equals(entity.Attributes.First(at => at.Name.Equals(c)).Value)))));
+                                && a.Value.Equals(entity.Attributes.First(at => at.Name.Equals(c)).Value)
+                                && !otherSubarraysAttributes.Contains(a)))));
 
-                        if (!entitiesWithAttributesThatArentInOtherSubarrays.Any()) {
-                            continue;
-                        }
+                        if (!entitiesWithAttributesThatArentInOtherSubarrays.Any()) continue;
 
                         var attributeGroups = entitiesWithAttributesThatArentInOtherSubarrays.SelectMany(x => x.Attributes)
                             .Where(a => combination.Contains(a.Name))
@@ -58,23 +50,16 @@ namespace AI3.ILAAlgorithm {
                     }
 
                     if (!maxCombination.Any()) {
-                        // Step 5: If COMBINATION_MAXIMUM=0, increase j by 1 and go to step 3 (j=j+1)
                         numAttributeCombinations++;
                     } else {
-                        // Step 6: Mark as classified all rows in the considered subarray where values from maxCombination appear
                         MarkClassified(subarray, maxCombination);
-                        // Step 7: Add a rule to R, the left side of this rule contains the names of the attributes from maxCombination with their values,
-                        // separated by the logical AND operator, and the right side contains the value of the decision attribute associated with the subarray (class)
                         ruleset.Add(new Rule {
                             Attributes = maxCombination,
-                            DecisionAttribute = subarray.First().DecisionAttribute //todo
+                            DecisionAttribute = subarray.First(e => e.Attributes.All(a => !maxCombination.Any(c => c.Name.Equals(a.Name) && c.Value.Equals(a.Name)))).DecisionAttribute
                         });
                         maxCombination = new();
                         maxCount = 0;
                     }
-
-                    // If there are still unmarked rows, go to step 4
-                    // If there are no more subarrays, return the current set of rules R
                 }
             }
             return ruleset;
@@ -90,7 +75,6 @@ namespace AI3.ILAAlgorithm {
         }
 
         private static void MarkClassified(List<Entity> subarray, List<ILAAttribute> combination) {
-            // Mark all rows in the subarray as classified if they contain all values from the combination.
             foreach (var entity in subarray) {
                 bool found = true;
                 foreach (var attribute in combination) {
