@@ -1,7 +1,7 @@
 ﻿namespace AI3.Entities {
     public class Entity {
-        public IEnumerable<ILAAttribute> Attributes { get; set; }
-        public int DecisionAttribute { get; set; }
-        public bool IsClassified { get; set; }
+        public List<ILAAttribute> Attributes { get; set; } = new List<ILAAttribute>();
+        public string DecisionAttribute { get; set; }
+        public bool IsClassified { get; set; } = false;
     }
 }

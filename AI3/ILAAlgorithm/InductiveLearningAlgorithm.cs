@@ -5,8 +5,7 @@ namespace AI3.ILAAlgorithm {
         public List<Rule> Learn(IEnumerable<Entity> data) {
             // Step 1: Divide the array (m examples) into n subarrays (n is the number of classes). One subarray for each possible value of the class attribute (for each class), set R as an empty set.
             var ruleset = new List<Rule>();
-            var subarrays = new Dictionary<int, List<Entity>>();
-            //var combinations = CombinationGenerator.GetCombinations(data.First().Attributes.Select(x => x.Name));
+            var subarrays = new Dictionary<string, List<Entity>>();
 
             DivideArrayIntoSubarrays(data, subarrays);
 
@@ -33,46 +32,29 @@ namespace AI3.ILAAlgorithm {
                     foreach (var combination in currentCombinations) {
                         var otherEntities = otherSubarrays.SelectMany(x => x.Value);
 
-                        var rowsThatArentClassified = subarray.Where(x => !x.IsClassified);
+                        var entitiesThatArentClassified = subarray.Where(x => !x.IsClassified);
 
-                        var rowsWithAttributesThatArentInOtherSubarrays = rowsThatArentClassified
+                        var entitiesWithAttributesThatArentInOtherSubarrays = entitiesThatArentClassified
                             .Where(entity =>
                                 !otherEntities.Any(e => combination.All(c => e.Attributes.Any(a => a.Name.Equals(c)
                                 && a.Value.Equals(entity.Attributes.First(at => at.Name.Equals(c)).Value)))));
 
-                        if (!rowsWithAttributesThatArentInOtherSubarrays.Any()) {
+                        if (!entitiesWithAttributesThatArentInOtherSubarrays.Any()) {
                             continue;
                         }
-                        var attributeValues = new Dictionary<IEnumerable<string>, List<object>>() { { combination, new List<object>() } };
-                        //var attributeValues = combination.ToDictionary(x => x, x => new List<object>());
-                        foreach (var row in rowsWithAttributesThatArentInOtherSubarrays) {
-                            attributeValues[combination].Add(row.Attributes.First(a => combination.Any(c => c.Equals(a.Name))).Value);
-                        }
 
-                        foreach (var attributeValue in attributeValues) {
-                            var groups = attributeValue.Value.GroupBy(y => y).OrderByDescending(g => g.Count()).ToList();
-                            for (int i = 0; i < groups.Count; i++) {
-                                var count = groups[i].Count();
-                                if (count > maxCount) {
-                                    maxCombination = new();
-                                    maxCombination.AddRange(from name in combination
-                                                            select new ILAAttribute() { Name = name, Value = groups[i].Key });
-                                    maxCount = count;
-                                }
-                            }
-                        }
+                        var attributeGroups = entitiesWithAttributesThatArentInOtherSubarrays.SelectMany(x => x.Attributes)
+                            .Where(a => combination.Contains(a.Name))
+                            .GroupBy(x => x.Name)
+                            .Select(g => new { Attribute = g.Key, Values = g.GroupBy(x => x.Value).OrderByDescending(v => v.Count()).First().Key })
+                            .ToList();
 
-                        //foreach (var attributeValue in attributeValues) {
-                        //    var key = attributeValue.Value.GroupBy(y => y).OrderByDescending(g => g.Count()).First().Key;
-                        //    var groups = attributeValue.Value.GroupBy(y => y).OrderByDescending(g => g.Count()).ToList();
-                        //    var count = attributeValue.Value.Count(y => y.Equals(key));
-                        //    if (count > maxCount) {
-                        //        maxCombination = new();
-                        //        maxCombination.AddRange(from name in combination
-                        //                                select new ILAAttribute() { Name = name, Value = groups[i].Key });
-                        //        maxCount = count;
-                        //    }
-                        //}
+                        var attributeCombination = attributeGroups.Select(x => new ILAAttribute { Name = x.Attribute, Value = x.Values }).ToList();
+
+                        if (attributeCombination.Count > maxCount) {
+                            maxCombination = attributeCombination;
+                            maxCount = attributeCombination.Count;
+                        }
                     }
 
                     if (!maxCombination.Any()) {
@@ -98,7 +80,7 @@ namespace AI3.ILAAlgorithm {
             return ruleset;
         }
 
-        private static void DivideArrayIntoSubarrays(IEnumerable<Entity> data, Dictionary<int, List<Entity>> subarrays) {
+        private static void DivideArrayIntoSubarrays(IEnumerable<Entity> data, Dictionary<string, List<Entity>> subarrays) {
             foreach (var row in data) {
                 if (!subarrays.ContainsKey(row.DecisionAttribute)) {
                     subarrays[row.DecisionAttribute] = new List<Entity>();
