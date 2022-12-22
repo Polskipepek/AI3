@@ -15,6 +15,18 @@ while (true) {
 
     var input = Console.ReadKey();
     var data = GetData(input.Key);
+
+    Console.Clear();
+    Console.WriteLine($"There are {data.Count()} entities. Do you want to limit data? (Y - for yes; Any other key to continue with {data.Count()} entities.)");
+    var limitFlag = Console.ReadKey().Key;
+    Console.Clear();
+    if (limitFlag == ConsoleKey.Y) {
+        Console.WriteLine($"Number of entities (1-{data.Count()}): ");
+        var entitycount = Console.ReadLine();
+        if (int.TryParse(entitycount, out int result)) {
+            if (result < data.Count() && result > 0) data = data.Take(result);
+        }
+    }
     Console.Clear();
 
     var ila = new InductiveLearningAlgorithm();
@@ -44,11 +56,11 @@ IEnumerable<Entity> GetData(ConsoleKey key) {
         var data = DataReader.ReadData($"{Environment.CurrentDirectory}/Data/test - short.csv", ";");
         return TableToEntitiesMapper.Map(data);
     } else if (key == ConsoleKey.D3) {
-        var data = DataReader.ReadData($"{Environment.CurrentDirectory}/Data/train.csv");
+        var data = DataReader.ReadData($"{Environment.CurrentDirectory}/Data/train.csv", ";");
         return TableToEntitiesMapper.Map(data);
-    //} else if (key == ConsoleKey.D4) {
+        //} else if (key == ConsoleKey.D4) {
 
-    //} else if (key == ConsoleKey.D5) {
+        //} else if (key == ConsoleKey.D5) {
 
     } else if (key == ConsoleKey.D6) {
         Console.Clear();
