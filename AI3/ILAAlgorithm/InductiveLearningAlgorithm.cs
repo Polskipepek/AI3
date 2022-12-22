@@ -6,9 +6,10 @@ namespace AI3.ILAAlgorithm {
         public List<Rule> Learn(IEnumerable<Entity> data) {
             var ruleset = new List<Rule>();
             var subarrays = new Dictionary<string, List<Entity>>();
+            var pairs = new Hashtable();
 
             DivideArrayIntoSubarrays(data, subarrays);
-            var pairs = new Hashtable();
+
             foreach (var subarray in subarrays.Values) {
                 int maxCount = 0;
                 List<ILAAttribute> maxCombination = new();
