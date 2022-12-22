@@ -15,6 +15,7 @@ namespace AI3.ILAAlgorithm {
 
                 var otherSubarrays = subarrays.Where(x => !x.Value.Equals(subarray));
                 var otherSubarraysAttributes = otherSubarrays.SelectMany(s => s.Value.SelectMany(x => x.Attributes)).DistinctBy(x => x.Value);
+                var otherEntities = otherSubarrays.SelectMany(x => x.Value);
 
                 while (!subarray.All(x => x.IsClassified)) {
                     var currentCombinations = CombinationGenerator.GetCombinations(subarray.First().Attributes.Select(x => x.Name)).Where(x => x.Count() == numAttributeCombinations);
@@ -24,33 +25,49 @@ namespace AI3.ILAAlgorithm {
                     }
 
                     foreach (var combination in currentCombinations) {
-                        var otherEntities = otherSubarrays.SelectMany(x => x.Value);
-                        var entitiesThatArentClassified = subarray.Where(x => !x.IsClassified);
-
-                        var entitiesWithAttributesThatArentInOtherSubarrays = entitiesThatArentClassified
+                        var groupedEntities = subarray
                             .Where(entity =>
                                 !otherEntities.Any(e => combination.All(c => e.Attributes.Any(a => a.Name.Equals(c)
-                                && a.Value.Equals(entity.Attributes.First(at => at.Name.Equals(c)).Value)))));
+                                && a.Value.Equals(entity.Attributes.First(at => at.Name.Equals(c)).Value)))))
+                            .GroupBy(e => combination.All(c => e.Attributes.Any(a => a.Name.Equals(c) && a.Value.Equals(e.Attributes.First(at => at.Name.Equals(c)).Value)))).ToList();
+                        //.GroupBy(e => e.Attributes.Where(a => combination.Contains(a.Name)).Select(a => new { a.Name, a.Value }));
 
-                        if (!entitiesWithAttributesThatArentInOtherSubarrays.Any()) {
-                            continue;
-                        }
+                        // Count the occurrences of each combination and match with all combinations
+                        foreach (var group in groupedEntities) {
+                            var combinationCount = group.Count();
 
-                        var attributeGroups = entitiesWithAttributesThatArentInOtherSubarrays.SelectMany(x => x.Attributes)
-                            .Where(a => combination.Contains(a.Name))
-                            .GroupBy(x => new { x.Name, x.Value })
-                            .Select(g => new { Attribute = g.Key, Counter = g.Count() })
-                            .OrderByDescending(x => x.Counter);
-
-                        var maxedAttributeGroup = attributeGroups.Where(a => a.Counter == attributeGroups.Max(g => g.Counter));
-
-                        var attributeCombination = maxedAttributeGroup.Select(x => new ILAAttribute { Name = x.Attribute.Name, Value = x.Attribute.Value }).ToList();
-
-                        if (attributeCombination.Count > maxCount) {
-                            maxCombination = attributeCombination;
-                            maxCount = attributeCombination.Count;
+                            if (combinationCount > maxCount && group.Any()) {
+                                maxCount = combinationCount;
+                                maxCombination = combination.Select(name => new ILAAttribute { Name = name, Value = group.First().Attributes.First(a => a.Name.Equals(name)).Value }).ToList();
+                            }
                         }
                     }
+
+
+                    //foreach (var combination in currentCombinations) {
+                    //    // Group the attributes in the subarray by their name and value
+                    //    var groupedAttributes = subarray
+                    //        .Where(x => !x.IsClassified)
+                    //        .Where(entity =>
+                    //           !otherEntities.Any(e => combination.All(c => e.Attributes.Any(a => a.Name.Equals(c)
+                    //           && a.Value.Equals(entity.Attributes.First(at => at.Name.Equals(c)).Value)))))
+                    //        .SelectMany(e => e.Attributes)
+                    //        .Where(a => combination.Contains(a.Name))
+                    //        .GroupBy(a => new { a.Name, a.Value });
+
+                    //    // Count the occurrences of each name/value pair and match with all combinations
+                    //    foreach (var group in groupedAttributes) {
+                    //        var valueCount = group.Count();
+                    //        //var entitiesWithAttributesThatArentInOtherSubarrays = group.Where(attribute =>
+                    //        //    !otherSubarrays.SelectMany(x => x.Value).Any(e => combination.All(c => e.Attributes.Any(a => a.Name.Equals(c)
+                    //        //    && a.Value.Equals(attribute.Value)))));
+
+                    //        if (valueCount > maxCount && group.Any()) {
+                    //            maxCount = valueCount;
+                    //            maxCombination = combination.Select(name => new ILAAttribute { Name = name, Value = groupedAttributes.First(a => a.Select(g => g.Name).Equals(name)).Key.Value }).ToList();
+                    //        }
+                    //    }
+                    //}
 
                     if (!maxCombination.Any()) {
                         numAttributeCombinations++;
@@ -58,7 +75,7 @@ namespace AI3.ILAAlgorithm {
                         MarkClassified(subarray, maxCombination);
                         ruleset.Add(new Rule {
                             Attributes = maxCombination,
-                            DecisionAttribute = subarray.First().DecisionAttribute //todo
+                            DecisionAttribute = subarray.First(e => e.Attributes.All(a => !maxCombination.Any(c => c.Name.Equals(a.Name) && c.Value.Equals(a.Name)))).DecisionAttribute
                         });
                         maxCombination = new();
                         maxCount = 0;
