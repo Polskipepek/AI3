@@ -13,7 +13,7 @@ namespace AI3.Mappers {
             foreach (DataRow row in table.Rows) {
                 var entity = new Entity();
                 foreach (DataColumn column in table.Columns) {
-                    if (column.ColumnName.Equals("decision")) continue;
+                    if (column.ColumnName.Equals("decision") || column.ColumnName.Equals("\"decision\"")) continue;
                     entity.Attributes.Add(new ILAAttribute() { Name = column.ColumnName, Value = row[column.ColumnName] });
                 }
                 entity.DecisionAttribute = row[table.Columns.Count-1] + "";
