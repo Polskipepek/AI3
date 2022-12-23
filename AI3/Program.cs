@@ -8,7 +8,7 @@ Console.WriteLine();
 while (true) {
     Console.WriteLine("1. Example Data from presentation.");
     Console.WriteLine("2. Banking Data.");
-    Console.WriteLine("3. Fruits Data. //TODO FIND DATASET");
+    Console.WriteLine("3. Fruits Data.");
     Console.WriteLine("0. Custom Data");
 
     var input = Console.ReadKey();
@@ -36,6 +36,7 @@ while (true) {
     var rules = ila.Learn(data);
     stopwatch.Stop();
 
+    Console.WriteLine();
     Console.WriteLine($"Entities: {data.Count()}");
     Console.WriteLine($"Stopwatch: {stopwatch.ElapsedMilliseconds}ms");
     Console.WriteLine("Rules:");
@@ -48,14 +49,14 @@ while (true) {
         Console.WriteLine($"\tDecision = {rules[i].DecisionAttribute}");
     }
 
-    if (input.Key == ConsoleKey.D2) {
+    if (input.Key == ConsoleKey.D2 || input.Key == ConsoleKey.D3) {
         DecisionPredictor predictor = new();
         predictor.SetRules(rules);
 
-        var dataToPredict = DataReader.ReadData($"{Environment.CurrentDirectory}/Data/test.csv", ";");
+        var dataToPredict = DataReader.ReadData($"{Environment.CurrentDirectory}/Data/{(input.Key == ConsoleKey.D2 ? "test.csv" : (input.Key == ConsoleKey.D3 ? "fruits test.txt" : ""))} ", ";");
         var entities = TableToEntitiesMapper.Map(dataToPredict);
         Console.WriteLine();
-        Console.WriteLine("Predictions:");
+       //Console.WriteLine("Predictions:");
 
         foreach (var entity in entities) {
             var prediction = predictor.PredictDecision(entity);
@@ -63,8 +64,7 @@ while (true) {
                 Console.WriteLine(prediction);
             }
         }
-        Console.WriteLine("End of successful predictions.");
-
+        //Console.WriteLine("End of successful predictions.");
     }
 
     Console.ReadKey();
@@ -74,7 +74,6 @@ IEnumerable<Entity> GetData(ConsoleKey key) {
     if (key == ConsoleKey.D2) {
         var data = DataReader.ReadData($"{Environment.CurrentDirectory}/Data/train.csv", ";");
         return TableToEntitiesMapper.Map(data);
-
     } else if (key == ConsoleKey.D0) {
         Console.Clear();
         Console.WriteLine("Decision attribute column name needs to be named \'decision\'");
@@ -85,7 +84,9 @@ IEnumerable<Entity> GetData(ConsoleKey key) {
         var data = DataReader.ReadData(path, delimeter.KeyChar.ToString());
         return TableToEntitiesMapper.Map(data);
 
-        //} else if (key == ConsoleKey.D3) {
+    } else if (key == ConsoleKey.D3) {
+        var data = DataReader.ReadData($"{Environment.CurrentDirectory}/Data/fruits train.txt", ",");
+        return TableToEntitiesMapper.Map(data);
     } else {
         var examples = new List<Entity> {
             new Entity { Attributes = new List<ILAAttribute>() { new ILAAttribute("Rozmiar", "sredni"), new ILAAttribute("Kolor", "niebieski"), new ILAAttribute("Ksztalt", "kostka") }, DecisionAttribute = "TAK" },

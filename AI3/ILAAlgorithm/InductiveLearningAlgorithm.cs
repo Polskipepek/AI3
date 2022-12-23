@@ -6,7 +6,7 @@ namespace AI3.ILAAlgorithm {
             var ruleset = new List<Rule>();
             var subarrays = new Dictionary<string, List<Entity>>();
             Dictionary<IEnumerable<ILAAttribute>, int> pairs = new();
-            int prevNumOfAttributes = 0;
+            int prevNumOfAttributes = 1;
 
             DivideArrayIntoSubarrays(data, subarrays);
 
@@ -17,11 +17,13 @@ namespace AI3.ILAAlgorithm {
 
                 var otherEntities = subarrays.Where(x => !x.Value.Equals(subarray)).SelectMany(x => x.Value);
                 var currentCombinations = GetCombinations(subarray, numAttributeCombinations);
+                Console.WriteLine($"Learning combination - {string.Join(", ", currentCombinations.SelectMany(x => x).ToList())},\t\tsubarray {subarray.First().DecisionAttribute}, j={numAttributeCombinations}");
 
                 while (!subarray.All(x => x.IsClassified)) {
                     if (prevNumOfAttributes != numAttributeCombinations) {
                         currentCombinations = GetCombinations(subarray, numAttributeCombinations);
                         prevNumOfAttributes = numAttributeCombinations;
+                        Console.WriteLine($"Learning combination - {string.Join(", ", currentCombinations.SelectMany(x => x).ToList())},\t\tsubarray {subarray.First().DecisionAttribute}, j={numAttributeCombinations}");
                     }
 
                     if (!currentCombinations.Any()) break;
